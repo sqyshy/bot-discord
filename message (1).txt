@@ -1,0 +1,309 @@
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, Events } = require('discord.js');
+require('dotenv').config();
+
+const TOKEN = process.env.DISCORD_TOKEN;
+const GUILD_ID = parseInt(process.env.GUILD_ID);
+const CONFESSION_CHANNEL_ID = parseInt(process.env.CONFESSION_CHANNEL_ID);
+
+const ALLOWED_USER_IDS = ['243748917311700992', '808492020862812194'];
+
+const intents = new GatewayIntentBits();
+intents.add(
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
+);
+
+const client = new Client({ intents: intents });
+
+// =========================================
+// COMMENT MODAL
+// =========================================
+
+class CommentModal extends ModalBuilder {
+    constructor(thread) {
+        super()
+            .setCustomId(`comment_modal_${thread.id}`)
+            .setTitle('💬 Comment Confession');
+        
+        const commentInput = new TextInputBuilder()
+            .setCustomId('comment')
+            .setLabel('Write your comment')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(500);
+        
+        this.addComponents(new ActionRowBuilder().addComponents(commentInput));
+        this.thread = thread;
+    }
+}
+
+// =========================================
+// CONFESSION BUTTONS
+// =========================================
+
+class ConfessionButtons {
+    constructor(channelId, threadId = null) {
+        this.channelId = channelId;
+        this.threadId = threadId;
+    }
+
+    getComponents() {
+        const row = new ActionRowBuilder();
+        
+        const commentButton = new ButtonBuilder()
+            .setCustomId(`comment_${this.channelId}_${this.threadId || 'null'}`)
+            .setLabel('💬 Comment')
+            .setStyle(ButtonStyle.Secondary);
+        
+        const confessButton = new ButtonBuilder()
+            .setCustomId(`confess_${this.channelId}`)
+            .setLabel('✍️ Confess')
+            .setStyle(ButtonStyle.Primary);
+        
+        row.addComponents(commentButton, confessButton);
+        return [row];
+    }
+}
+
+// =========================================
+// CONFESSION MODAL
+// =========================================
+
+class ConfessionModal extends ModalBuilder {
+    constructor(channelId) {
+        super()
+            .setCustomId(`confession_modal_${channelId}`)
+            .setTitle('📩 Anonymous Confession');
+        
+        const confessionInput = new TextInputBuilder()
+            .setCustomId('confession')
+            .setLabel('Write your confession')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('Type your confession here...')
+            .setRequired(true)
+            .setMaxLength(1000);
+        
+        this.addComponents(new ActionRowBuilder().addComponents(confessionInput));
+        this.channelId = channelId;
+    }
+}
+
+// =========================================
+// START PANEL
+// =========================================
+
+class StartView {
+    constructor(channelId) {
+        this.channelId = channelId;
+    }
+
+    getComponents() {
+        const row = new ActionRowBuilder();
+        
+        const confessButton = new ButtonBuilder()
+            .setCustomId(`start_confess_${this.channelId}`)
+            .setLabel('✉️ Confess')
+            .setStyle(ButtonStyle.Primary);
+        
+        row.addComponents(confessButton);
+        return [row];
+    }
+}
+
+// =========================================
+// SLASH COMMANDS
+// =========================================
+
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    if (interaction.commandName === 'help') {
+        const embed = new EmbedBuilder()
+            .setTitle('📚 **COMMAND LIST**')
+            .setColor(0xFF69B4)
+            .addFields(
+                { name: '🔹 PUBLIC', value: '`/help`', inline: false },
+                { name: '🔸 ADMIN', value: '`/dm` `/clear` `/setupconfession`', inline: false }
+            )
+            .setFooter({ text: `Requested by ${interaction.user.displayName}` });
+        
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    if (interaction.commandName === 'dm') {
+        if (!ALLOWED_USER_IDS.includes(interaction.user.id)) {
+            await interaction.reply({ content: '❌ You are not authorized to use this command.', ephemeral: true });
+            return;
+        }
+        
+        await interaction.deferReply({ ephemeral: true });
+        const utente = interaction.options.getUser('utente');
+        const messaggio = interaction.options.getString('messaggio');
+        
+        try {
+            await utente.send(messaggio);
+            await interaction.editReply({ content: `✅ Sent to ${utente.displayName}` });
+        } catch (error) {
+            await interaction.editReply({ content: '❌ DMs closed' });
+        }
+    }
+
+    if (interaction.commandName === 'clear') {
+        if (!ALLOWED_USER_IDS.includes(interaction.user.id)) {
+            await interaction.reply({ content: '❌ You are not authorized to use this command.', ephemeral: true });
+            return;
+        }
+        
+        await interaction.deferReply({ ephemeral: true });
+        const amount = interaction.options.getInteger('amount');
+        
+        if (amount < 1 || amount > 100) {
+            await interaction.editReply({ content: '❌ Use 1-100' });
+            return;
+        }
+        
+        const deleted = await interaction.channel.bulkDelete(amount, true);
+        await interaction.editReply({ content: `✅ Deleted ${deleted.size} messages` });
+    }
+
+    if (interaction.commandName === 'setupconfession') {
+        if (!ALLOWED_USER_IDS.includes(interaction.user.id)) {
+            await interaction.reply({ content: '❌ You are not authorized to use this command.', ephemeral: true });
+            return;
+        }
+        
+        const embed = new EmbedBuilder()
+            .setTitle('✉️ Anonymous Confessions')
+            .setDescription('Click the button below to send a confession')
+            .setColor(0x2B2D31);
+        
+        const startView = new StartView(CONFESSION_CHANNEL_ID);
+        await interaction.channel.send({ embeds: [embed], components: startView.getComponents() });
+        await interaction.reply({ content: '✅ Confession panel sent.', ephemeral: true });
+    }
+});
+
+// =========================================
+// MODAL SUBMITS & BUTTONS
+// =========================================
+
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (interaction.isModalSubmit()) {
+        if (interaction.customId.startsWith('comment_modal_')) {
+            const threadId = interaction.customId.split('_')[2];
+            const thread = await client.channels.fetch(threadId);
+            const comment = interaction.fields.getTextInputValue('comment');
+            
+            const embed = new EmbedBuilder()
+                .setDescription(comment)
+                .setColor(0x2B2D31)
+                .setAuthor({ 
+                    name: 'Anonymous Comment',
+                    iconURL: interaction.guild.iconURL()
+                })
+                .setFooter({ 
+                    text: `Anonymous Comment • ${new Date().toLocaleString('it-IT')}`
+                });
+            
+            await thread.send({ embeds: [embed] });
+            await interaction.reply({ content: '✅ Comment sent.', ephemeral: true });
+        }
+
+        if (interaction.customId.startsWith('confession_modal_')) {
+            const channelId = parseInt(interaction.customId.split('_')[2]);
+            const confession = interaction.fields.getTextInputValue('confession');
+            const channel = await client.channels.fetch(channelId);
+            
+            const embed = new EmbedBuilder()
+                .setTitle('📨 New Confession')
+                .setDescription(confession)
+                .setColor(0x2B2D31)
+                .setAuthor({ 
+                    name: 'Anonymous Confession',
+                    iconURL: interaction.guild.iconURL()
+                })
+                .setFooter({ 
+                    text: `Anonymous Confession • ${new Date().toLocaleString('it-IT')}`
+                });
+            
+            const msg = await channel.send({ embeds: [embed] });
+            const thread = await msg.startThread({ 
+                name: '💬 Confession Comments', 
+                autoArchiveDuration: 1440 
+            });
+            
+            const confessionButtons = new ConfessionButtons(channelId, thread.id);
+            await msg.edit({ components: confessionButtons.getComponents() });
+            
+            await interaction.reply({ content: '✅ Confession sent.', ephemeral: true });
+        }
+    }
+
+    if (interaction.isButton()) {
+        if (interaction.customId.startsWith('start_confess_')) {
+            const channelId = parseInt(interaction.customId.split('_')[2]);
+            const modal = new ConfessionModal(channelId);
+            await interaction.showModal(modal);
+        }
+
+        if (interaction.customId.startsWith('comment_')) {
+            const parts = interaction.customId.split('_');
+            const threadId = parts[2];
+            const thread = await client.channels.fetch(threadId);
+            const modal = new CommentModal(thread);
+            await interaction.showModal(modal);
+        }
+
+        if (interaction.customId.startsWith('confess_')) {
+            const channelId = parseInt(interaction.customId.split('_')[1]);
+            const modal = new ConfessionModal(channelId);
+            await interaction.showModal(modal);
+        }
+    }
+});
+
+// =========================================
+// AVVIO
+// =========================================
+
+client.once(Events.ClientReady, async () => {
+    console.log(`✅ Bot connected as ${client.user.tag}`);
+    
+    const commands = [
+        { name: 'help', description: 'Show all commands' },
+        { 
+            name: 'dm', 
+            description: 'Send private message',
+            options: [
+                { name: 'utente', type: 6, description: 'User to message', required: true },
+                { name: 'messaggio', type: 3, description: 'Message content', required: true }
+            ]
+        },
+        { 
+            name: 'clear', 
+            description: 'Delete messages',
+            options: [
+                { name: 'amount', type: 4, description: 'Number of messages (1-100)', required: true }
+            ]
+        },
+        { name: 'setupconfession', description: 'Setup confession panel' }
+    ];
+    
+    const rest = new (require('@discordjs/rest').REST)({ version: '10' }).setToken(TOKEN);
+    
+    try {
+        await rest.put(
+            require('discord-api-types/v10').Routes.applicationGuildCommands(client.user.id, GUILD_ID),
+            { body: commands }
+        );
+        console.log('✅ Slash commands synced!');
+    } catch (error) {
+        console.error('Error syncing commands:', error);
+    }
+    
+    console.log('📝 Commands ready: /help /dm /clear /setupconfession');
+});
+
+client.login(TOKEN);
