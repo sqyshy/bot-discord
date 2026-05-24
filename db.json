@@ -5,6 +5,11 @@
       "joinChannelId": "1506356706605662389",
       "textChannelId": "1506356833953124424",
       "logChannelId": "1506084939270197419"
+    },
+    "1471369796418404446": {
+      "ticketCategoryId": "1508152042793992263",
+      "ticketPanelChannelId": "1508152058803650813",
+      "ticketLogChannelId": "1508152095772119243"
     }
   },
   "trusts": {}

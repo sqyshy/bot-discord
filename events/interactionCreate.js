@@ -355,7 +355,55 @@ module.exports = {
                 return;
             }
 
-            // 13. /play
+            // 13. /ticket-setup
+            if (commandName === 'ticket-setup') {
+                if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+                    return interaction.reply({ content: "❌ You are not authorized to use this command.", flags: ['Ephemeral'] });
+                }
+                
+                const category = interaction.options.getChannel('category');
+                const panelChannel = interaction.options.getChannel('panel_channel');
+                const logChannel = interaction.options.getChannel('log_channel');
+
+                if (category.type !== ChannelType.GuildCategory) {
+                    return interaction.reply({ content: "❌ Please select a valid Category.", flags: ['Ephemeral'] });
+                }
+                if (panelChannel.type !== ChannelType.GuildText) {
+                    return interaction.reply({ content: "❌ Please select a valid Text Channel for the panel.", flags: ['Ephemeral'] });
+                }
+                if (logChannel.type !== ChannelType.GuildText) {
+                    return interaction.reply({ content: "❌ Please select a valid Text Channel for the logs.", flags: ['Ephemeral'] });
+                }
+
+                if (!db.setups[interaction.guild.id]) db.setups[interaction.guild.id] = {};
+                db.setups[interaction.guild.id].ticketCategoryId = category.id;
+                db.setups[interaction.guild.id].ticketPanelChannelId = panelChannel.id;
+                db.setups[interaction.guild.id].ticketLogChannelId = logChannel.id;
+                saveDB();
+
+                const embed = new EmbedBuilder()
+                    .setTitle('🎫 Support Tickets')
+                    .setDescription('Click the button below to open a new support ticket.')
+                    .setColor('#5865F2')
+                    .setFooter({ text: 'Support System' });
+                
+                const emojiAdd = interaction.guild?.emojis.cache.find(e => e.name === 'vm_add');
+                const btnOpen = new ButtonBuilder()
+                    .setCustomId('ticket_open')
+                    .setLabel('Open Ticket')
+                    .setStyle(ButtonStyle.Primary);
+                if (emojiAdd) btnOpen.setEmoji(emojiAdd.id);
+                else btnOpen.setEmoji('🎫');
+
+                const row = new ActionRowBuilder().addComponents(btnOpen);
+
+                await panelChannel.send({ embeds: [embed], components: [row] });
+                
+                await interaction.reply({ content: `✅ Ticket system setup completed!\nCategory: <#${category.id}>\nPanel: <#${panelChannel.id}>\nLogs: <#${logChannel.id}>`, flags: ['Ephemeral'] });
+                return;
+            }
+
+            // 14. /play
             if (commandName === 'play') {
                 const voiceChannel = interaction.member.voice.channel;
                 if (!voiceChannel) {
@@ -859,6 +907,110 @@ module.exports = {
                     modal.addComponents(firstActionRow);
                     await interaction.showModal(modal);
                     break;
+            }
+        }
+
+        // --- Gestione Pulsanti Ticket ---
+        if (interaction.customId === 'ticket_open') {
+            const setup = db.setups[interaction.guild.id];
+            if (!setup || !setup.ticketCategoryId) {
+                return interaction.reply({ content: "Ticket system not fully configured.", flags: ['Ephemeral'] });
+            }
+
+            await interaction.deferReply({ flags: ['Ephemeral'] });
+
+            const category = interaction.guild.channels.cache.get(setup.ticketCategoryId) || await interaction.guild.channels.fetch(setup.ticketCategoryId).catch(() => null);
+            if (!category) {
+                return interaction.editReply("Ticket category not found.");
+            }
+
+            const staffRoleId = '1508148694242033904';
+            const ticketName = `ticket-${interaction.user.username}`;
+
+            try {
+                const ticketChannel = await interaction.guild.channels.create({
+                    name: ticketName,
+                    type: ChannelType.GuildText,
+                    parent: category.id,
+                    permissionOverwrites: [
+                        {
+                            id: interaction.guild.id,
+                            deny: [PermissionsBitField.Flags.ViewChannel],
+                        },
+                        {
+                            id: interaction.user.id,
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
+                        },
+                        {
+                            id: staffRoleId,
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
+                        }
+                    ]
+                });
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`Ticket: ${interaction.user.tag}`)
+                    .setDescription(`Welcome ${interaction.user}! A staff member <@&${staffRoleId}> will be with you shortly.\n\nTo close this ticket, click the button below.`)
+                    .setColor('#5865F2');
+
+                const emojiLock = interaction.guild?.emojis.cache.find(e => e.name === 'vm_lock');
+                const btnClose = new ButtonBuilder()
+                    .setCustomId('ticket_close')
+                    .setLabel('Close Ticket')
+                    .setStyle(ButtonStyle.Danger);
+                if (emojiLock) btnClose.setEmoji(emojiLock.id);
+                else btnClose.setEmoji('🔒');
+
+                const row = new ActionRowBuilder().addComponents(btnClose);
+
+                await ticketChannel.send({ content: `${interaction.user} <@&${staffRoleId}>`, embeds: [embed], components: [row] });
+                await interaction.editReply(`✅ Ticket created: <#${ticketChannel.id}>`);
+            } catch (error) {
+                console.error(error);
+                await interaction.editReply("Failed to create ticket.");
+            }
+        }
+
+        if (interaction.customId === 'ticket_close') {
+            await interaction.deferReply();
+            const setup = db.setups[interaction.guild.id];
+            
+            try {
+                const discordHtmlTranscripts = require('discord-html-transcripts');
+                const transcript = await discordHtmlTranscripts.createTranscript(interaction.channel, {
+                    limit: -1,
+                    returnType: 'attachment',
+                    filename: `transcript-${interaction.channel.name}.html`,
+                    saveImages: true,
+                    poweredBy: false
+                });
+
+                // Send to user
+                await interaction.user.send({
+                    content: `Your ticket **${interaction.channel.name}** has been closed. Here is the transcript:`,
+                    files: [transcript]
+                }).catch(() => console.log('Could not send DM to user.'));
+
+                // Send to log channel if configured
+                if (setup && setup.ticketLogChannelId) {
+                    const logChannel = interaction.guild.channels.cache.get(setup.ticketLogChannelId) || await interaction.guild.channels.fetch(setup.ticketLogChannelId).catch(() => null);
+                    if (logChannel) {
+                        const embed = new EmbedBuilder()
+                            .setTitle('Ticket Closed')
+                            .setDescription(`Ticket: ${interaction.channel.name}\nClosed by: ${interaction.user}`)
+                            .setColor('#ED4245')
+                            .setTimestamp();
+                        await logChannel.send({ embeds: [embed], files: [transcript] }).catch(() => {});
+                    }
+                }
+
+                await interaction.editReply("Transcript saved! Deleting channel in 5 seconds...");
+                setTimeout(() => {
+                    interaction.channel.delete().catch(() => {});
+                }, 5000);
+            } catch (error) {
+                console.error(error);
+                await interaction.editReply("Failed to close ticket and generate transcript.");
             }
         }
     }

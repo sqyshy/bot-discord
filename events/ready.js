@@ -192,6 +192,30 @@ module.exports = {
                         max_value: 100
                     }
                 ]
+            },
+            {
+                name: 'ticket-setup',
+                description: 'Configure the ticket support panel',
+                options: [
+                    {
+                        name: 'category',
+                        description: 'The category where new tickets will be created',
+                        type: ApplicationCommandOptionType.Channel,
+                        required: true
+                    },
+                    {
+                        name: 'panel_channel',
+                        description: 'The text channel to send the ticket panel to',
+                        type: ApplicationCommandOptionType.Channel,
+                        required: true
+                    },
+                    {
+                        name: 'log_channel',
+                        description: 'The text channel for ticket transcripts',
+                        type: ApplicationCommandOptionType.Channel,
+                        required: true
+                    }
+                ]
             }
         ];
 
