@@ -6,10 +6,10 @@ module.exports = {
     async execute(client) {
         console.log(`[BOT] Logged in as ${client.user.tag}!`);
         client.user.setPresence({
-            activities: [{ 
-                name: '/tsuki - created by masaki', 
-                type: ActivityType.Streaming, 
-                url: 'https://twitch.tv/discord' 
+            activities: [{
+                name: '/tsuki - created by masaki',
+                type: ActivityType.Streaming,
+                url: 'https://guns.lol/sqyshy'
             }],
             status: 'online',
         });
@@ -18,33 +18,33 @@ module.exports = {
         const slashCommands = [
             {
                 name: 'help',
-                description: 'Mostra il menu di aiuto interattivo'
+                description: 'Shows the interactive help menu'
             },
             {
                 name: 'status',
-                description: 'Mostra lo stato del server'
+                description: 'Shows the server status'
             },
             {
                 name: 'emoji-setup',
-                description: 'Configura automaticamente le emoji per VoiceMaster'
+                description: 'Automatically configures emojis for VoiceMaster'
             },
             {
                 name: 'reload',
-                description: 'Riavvia la configurazione dei canali del server'
+                description: 'Restarts the server channel configuration'
             },
             {
                 name: 'dm',
-                description: 'Invia un messaggio privato anonimo ad un utente',
+                description: 'Sends an anonymous private message to a user',
                 options: [
                     {
                         name: 'user',
-                        description: 'L\'utente a cui inviare il messaggio',
+                        description: 'The user to send the message to',
                         type: ApplicationCommandOptionType.User,
                         required: true
                     },
                     {
                         name: 'message',
-                        description: 'Il messaggio da inviare',
+                        description: 'The message to send',
                         type: ApplicationCommandOptionType.String,
                         required: true
                     }
@@ -52,35 +52,35 @@ module.exports = {
             },
             {
                 name: 'vc-setup',
-                description: 'Avvia il pannello di controllo VoiceMaster'
+                description: 'Starts the VoiceMaster control panel'
             },
             {
                 name: 'vc-remove',
-                description: 'Rimuove la configurazione VoiceMaster dal server'
+                description: 'Removes the VoiceMaster configuration from the server'
             },
             {
                 name: 'log-setup',
-                description: 'Configura il sistema di log del server'
+                description: 'Configures the server logging system'
             },
             {
                 name: 'log-remove',
-                description: 'Rimuove la configurazione di log dal server'
+                description: 'Removes the logging configuration from the server'
             },
             {
                 name: 'global-setup',
-                description: 'Esegue il setup automatico completo (VoiceMaster + Logs)'
+                description: 'Runs the complete automatic setup (VoiceMaster + Logs)'
             },
             {
                 name: 'setupconfession',
-                description: 'Configura il pannello per inviare confessioni anonime'
+                description: 'Configures the panel to send anonymous confessions'
             },
             {
                 name: 'play',
-                description: 'Riproduce una canzone o playlist da YouTube/Spotify',
+                description: 'Plays a song or playlist from YouTube/Spotify',
                 options: [
                     {
                         name: 'song',
-                        description: 'Nome della traccia, link YouTube o link Spotify',
+                        description: 'Track name, YouTube link, or Spotify link',
                         type: ApplicationCommandOptionType.String,
                         required: true
                     }
@@ -88,31 +88,31 @@ module.exports = {
             },
             {
                 name: 'stop',
-                description: 'Ferma la riproduzione musicale e disconnette il bot'
+                description: 'Stops music playback and disconnects the bot'
             },
             {
                 name: 'skip',
-                description: 'Salto alla prossima traccia in coda'
+                description: 'Skips to the next track in the queue'
             },
             {
                 name: 'pause',
-                description: 'Mette in pausa la riproduzione'
+                description: 'Pauses the music playback'
             },
             {
                 name: 'resume',
-                description: 'Riprende la riproduzione musicale'
+                description: 'Resumes the music playback'
             },
             {
                 name: 'nowplaying',
-                description: 'Mostra il brano attualmente in riproduzione'
+                description: 'Shows the currently playing track'
             },
             {
                 name: 'volume',
-                description: 'Regola il volume del bot',
+                description: 'Adjusts the bot volume',
                 options: [
                     {
                         name: 'level',
-                        description: 'Percentuale del volume (0-100)',
+                        description: 'Volume percentage (0-100)',
                         type: ApplicationCommandOptionType.Integer,
                         required: true,
                         min_value: 0,
@@ -122,32 +122,32 @@ module.exports = {
             },
             {
                 name: 'loop',
-                description: 'Imposta la modalità di loop',
+                description: 'Sets the loop mode',
                 options: [
                     {
                         name: 'mode',
-                        description: 'Modalità loop desiderata',
+                        description: 'Desired loop mode',
                         type: ApplicationCommandOptionType.String,
                         required: true,
                         choices: [
                             { name: 'Off', value: 'off' },
-                            { name: 'Track (Canzone)', value: 'track' },
-                            { name: 'Queue (Coda)', value: 'queue' }
+                            { name: 'Track', value: 'track' },
+                            { name: 'Queue', value: 'queue' }
                         ]
                     }
                 ]
             },
             {
                 name: 'shuffle',
-                description: 'Mescola i brani presenti nella coda'
+                description: 'Shuffles the tracks in the queue'
             },
             {
                 name: 'remove',
-                description: 'Rimuove un brano specifico dalla coda',
+                description: 'Removes a specific track from the queue',
                 options: [
                     {
                         name: 'index',
-                        description: 'Posizione del brano nella coda',
+                        description: 'Track position in the queue',
                         type: ApplicationCommandOptionType.Integer,
                         required: true,
                         min_value: 1
@@ -156,23 +156,23 @@ module.exports = {
             },
             {
                 name: 'clear',
-                description: 'Pulisce l\'intera coda musicale'
+                description: 'Clears the entire music queue'
             },
             {
                 name: 'queue',
-                description: 'Visualizza la coda dei brani nel server'
+                description: 'Displays the server music queue'
             },
             {
                 name: 'autoplay',
-                description: 'Attiva/disattiva l\'autoplay per riprodurre brani simili'
+                description: 'Toggles autoplay for similar tracks'
             },
             {
                 name: 'seek',
-                description: 'Salta ad un secondo specifico del brano',
+                description: 'Skips to a specific second in the track',
                 options: [
                     {
                         name: 'seconds',
-                        description: 'Il secondo a cui saltare',
+                        description: 'The second to skip to',
                         type: ApplicationCommandOptionType.Integer,
                         required: true,
                         min_value: 0
@@ -181,11 +181,11 @@ module.exports = {
             },
             {
                 name: 'purge',
-                description: 'Cancella una quantità di messaggi in chat',
+                description: 'Deletes a number of messages in chat',
                 options: [
                     {
                         name: 'amount',
-                        description: 'Numero di messaggi da cancellare (1-100)',
+                        description: 'Number of messages to delete (1-100)',
                         type: ApplicationCommandOptionType.Integer,
                         required: true,
                         min_value: 1,
@@ -222,6 +222,15 @@ module.exports = {
         try {
             console.log('[STARTUP] Registering global slash commands...');
             await client.application.commands.set(slashCommands);
+
+            // Register instantly to the main server to bypass Discord's 1-hour global cache
+            const guildId = '1496616112379658442';
+            const guild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId).catch(() => null);
+            if (guild) {
+                await guild.commands.set(slashCommands);
+                console.log(`[STARTUP] Guild slash commands successfully registered for server ${guildId}!`);
+            }
+
             console.log('[STARTUP] Global slash commands successfully registered!');
         } catch (error) {
             console.error('[STARTUP] Failed to register slash commands:', error);
