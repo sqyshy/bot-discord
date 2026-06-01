@@ -1,13 +1,13 @@
 {
   "setups": {
     "1510785465022812170": {
-      "categoryId": "1510791211726803005",
-      "joinChannelId": "1510791704410587186",
-      "textChannelId": "1510793713478012978",
-      "logChannelId": "1510792025069322361",
+      "categoryId": "1510794602091778203",
+      "joinChannelId": "1510794603874353393",
+      "textChannelId": "1510794603148742697",
+      "logChannelId": "1510794605388501139",
       "ticketCategoryId": "1510792634744963193",
       "ticketPanelChannelId": "1510792688541241476",
-      "ticketLogChannelId": "1510792025069322361"
+      "ticketLogChannelId": "1510794605388501139"
     }
   },
   "trusts": {}
